@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'nahida do',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
@@ -44,7 +44,8 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  // State<MyHomePage> createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _TodoPageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -110,6 +111,60 @@ class _MyHomePageState extends State<MyHomePage> {
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class TodoItemData {
+  String title;
+  bool isDone;
+  TodoItemData({required this.title, required this.isDone});
+}
+
+class _TodoPageState extends State<MyHomePage> {
+  // List _todoItems = [];
+  List<TodoItemData> _todoItem = [];
+
+  void _addTodoItem(v) {
+    setState(() {
+      _todoItem.add(TodoItemData(title: v, isDone: false));
+    });
+  }
+
+  // var _todoController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(children: <Widget>[
+        Expanded(
+          child: ListView.builder(
+            itemCount: _todoItem.length,
+            itemBuilder: (BuildContext context, int index) {
+              return CheckboxListTile(
+                title: Text(_todoItem[index].title),
+                value: _todoItem[index].isDone,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _todoItem[index].isDone = value!;
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        TextField(
+          onChanged: (String data) {
+            print(data);
+          },
+          controller: _todoController,
+          onSubmitted: (v) {
+            _addTodoItem(v);
+            // 清空textfiled
+            // _todoController.clear();
+          },
+        )
+      ]),
     );
   }
 }
