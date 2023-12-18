@@ -122,16 +122,17 @@ class TodoItemData {
 }
 
 class _TodoPageState extends State<MyHomePage> {
-  // List _todoItems = [];
-  List<TodoItemData> _todoItem = [];
+  List<TodoItemData> _todoItemList = [
+    TodoItemData(title: "第一个", isDone: false)
+  ];
+
+  final _todoController = TextEditingController();
 
   void _addTodoItem(v) {
     setState(() {
-      _todoItem.add(TodoItemData(title: v, isDone: false));
+      _todoItemList.add(TodoItemData(title: v, isDone: false));
     });
   }
-
-  // var _todoController;
 
   @override
   Widget build(BuildContext context) {
@@ -139,14 +140,14 @@ class _TodoPageState extends State<MyHomePage> {
       body: Column(children: <Widget>[
         Expanded(
           child: ListView.builder(
-            itemCount: _todoItem.length,
+            itemCount: _todoItemList.length,
             itemBuilder: (BuildContext context, int index) {
               return CheckboxListTile(
-                title: Text(_todoItem[index].title),
-                value: _todoItem[index].isDone,
+                title: Text(_todoItemList[index].title),
+                value: _todoItemList[index].isDone,
                 onChanged: (bool? value) {
                   setState(() {
-                    _todoItem[index].isDone = value!;
+                    _todoItemList[index].isDone = value!;
                   });
                 },
               );
@@ -154,6 +155,13 @@ class _TodoPageState extends State<MyHomePage> {
           ),
         ),
         TextField(
+          decoration: InputDecoration(
+            hintText: "请输入待办事项",
+            contentPadding: const EdgeInsets.all(10.0),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
+          ),
           onChanged: (String data) {
             print(data);
           },
@@ -161,7 +169,7 @@ class _TodoPageState extends State<MyHomePage> {
           onSubmitted: (v) {
             _addTodoItem(v);
             // 清空textfiled
-            // _todoController.clear();
+            _todoController.clear();
           },
         )
       ]),
