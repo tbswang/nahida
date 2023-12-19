@@ -1,6 +1,39 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
-void main() {
+// ignore: constant_identifier_names
+const IS_DONE = 1;
+
+// Enum Task_Status
+
+class TodoItemData {
+  final int id;
+  final String title;
+  final int status;
+  const TodoItemData(
+      {required this.id, required this.title, required this.status});
+
+  // Convert a Dog into a Map. The keys must correspond to the names of the
+  // columns in the database.
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      "title": title,
+      "status": status,
+    };
+  }
+
+  // Implement toString to make it easier to see information about
+  // each dog when using the print statement.
+  @override
+  String toString() {
+    return 'TodoItem{id: $id, title: $title, status: $status}';
+  }
+}
+
+void main() async {
   runApp(const MyApp());
 }
 
@@ -48,131 +81,228 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _TodoPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class _TodoPageState extends State<MyHomePage> {
+  var _database;
 
   @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+  void initState() {
+    super.initState();
+    _initDatabase();
   }
-}
-
-class TodoItemData {
-  String title;
-  bool isDone;
-  TodoItemData({required this.title, required this.isDone});
-}
-
-class _TodoPageState extends State<MyHomePage> {
-  List<TodoItemData> _todoItemList = [
-    TodoItemData(title: "第一个", isDone: false)
-  ];
 
   final _todoController = TextEditingController();
+  var showStatus = 0;
 
-  void _addTodoItem(v) {
+  Future<void> _initDatabase() async {
+    // 获取应用文档目录的路径
+    final directory = await getDatabasesPath();
+    final path = join(directory, 'todo_item_database.db');
+
+    // 打开/创建数据库
+    final database = await openDatabase(
+      path,
+      onCreate: (db, version) {
+        // Run the CREATE TABLE statement on the database.
+        return db.execute(
+          'CREATE TABLE todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER)',
+        );
+      },
+      onOpen: (db) async {
+        // 如果不存在，就创建一个
+        return await db.execute(
+          'CREATE TABLE IF NOT EXISTS todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER)',
+        );
+      },
+      // Set the version. This executes the onCreate function and provides a
+      // path to perform database upgrades and downgrades.
+      version: 1,
+    );
     setState(() {
-      _todoItemList.add(TodoItemData(title: v, isDone: false));
+      _database = database;
     });
+  }
+
+  _reset() async {
+    final db = await _database;
+    await db.execute('DROP TABLE todo_item');
+  }
+
+  _showStatus(int status) async {
+    showStatus = status;
+    setState(() {});
+  }
+
+  _clear() async {
+    final db = await _database;
+    await db.execute('DELETE FROM todo_item');
+  }
+
+  // Define a function that inserts dogs into the database
+  Future<void> insertTodoItem(TodoItemData todoItemData) async {
+    // Get a reference to the database.
+    final db = await _database;
+
+    // Insert the Dog into the correct table. You might also specify the
+    // `conflictAlgorithm` to use in case the same dog is inserted twice.
+    //
+    // In this case, replace any previous data.
+    await db.insert(
+      'todo_item',
+      todoItemData.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateDog(TodoItemData todoItemData) async {
+    // Get a reference to the database.
+    final db = await _database;
+
+    // Update the given Dog.
+    await db.update(
+      'todo_item',
+      todoItemData.toMap(),
+      // Ensure that the Dog has a matching id.
+      where: 'id = ?',
+      // Pass the Dog's id as a whereArg to prevent SQL injection.
+      whereArgs: [todoItemData.id],
+    );
+  }
+
+  // A method that retrieves all the dogs from the dogs table.
+  Future<List<TodoItemData>> todoItems({int showStatus = -1}) async {
+    // Get a reference to the database.
+    final db = await _database;
+
+    var maps;
+    if (showStatus >= 0) {
+      maps = await db
+          .query('todo_item', where: 'status = ?', whereArgs: [showStatus]);
+    } else {
+      maps = await db.query('todo_item');
+    }
+    // Query the table for all The Dogs.
+
+    // Convert the List<Map<String, dynamic> into a List<Dog>.
+    return List.generate(maps.length, (i) {
+      return TodoItemData(
+        id: maps[i]['id'] as int,
+        title: maps[i]['title'] as String,
+        status: maps[i]["status"] as int,
+      );
+    });
+  }
+
+  void _addTodoItem(String v) async {
+    var data = await todoItems();
+    var fido = TodoItemData(
+      id: data.length + 1,
+      title: v,
+      status: 0,
+    );
+    insertTodoItem(fido);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(children: <Widget>[
-        Expanded(
-          child: ListView.builder(
-            itemCount: _todoItemList.length,
-            itemBuilder: (BuildContext context, int index) {
-              return CheckboxListTile(
-                title: Text(_todoItemList[index].title),
-                value: _todoItemList[index].isDone,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _todoItemList[index].isDone = value!;
-                  });
-                },
-              );
-            },
-          ),
-        ),
-        TextField(
-          decoration: InputDecoration(
-            hintText: "请输入待办事项",
-            contentPadding: const EdgeInsets.all(10.0),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15.0),
-            ),
-          ),
-          onChanged: (String data) {
-            print(data);
-          },
-          controller: _todoController,
-          onSubmitted: (v) {
-            _addTodoItem(v);
-            // 清空textfiled
-            _todoController.clear();
-          },
-        )
-      ]),
-    );
+    return FutureBuilder(
+        future: todoItems(showStatus: showStatus),
+        builder:
+            (BuildContext context, AsyncSnapshot<List<TodoItemData>> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else if (!snapshot.hasData) {
+            return const TextField(
+                decoration: InputDecoration(
+              hintText: "请输入待办事项",
+              contentPadding: const EdgeInsets.all(10.0),
+            ));
+          } else if (snapshot.connectionState == ConnectionState.done) {
+            final _todoItemList = snapshot.data ?? [];
+            return Scaffold(
+              body: Column(children: <Widget>[
+                ButtonBar(
+                  alignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ElevatedButton(
+                        // 选中的时候紫色
+                        style: showStatus == 0
+                            ? ButtonStyle(
+                                backgroundColor:
+                                    MaterialStateProperty.all<Color>(
+                                        Colors.purple.shade200),
+                              )
+                            : null,
+                        onPressed: () {
+                          _showStatus(0);
+                        },
+                        child: const Text("进行中")),
+                    ElevatedButton(
+                        // 选中的时候紫色
+                        style: showStatus == 1
+                            ? ButtonStyle(
+                                backgroundColor:
+                                    MaterialStateProperty.all<Color>(
+                                        Colors.purple.shade200),
+                              )
+                            : null,
+                        onPressed: () {
+                          _showStatus(IS_DONE);
+                        },
+                        child: const Text("已完成")),
+                    ElevatedButton(
+                      onPressed: () {
+                        _clear();
+                        setState(() {});
+                      },
+                      child: const Text('重置'),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _todoItemList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return CheckboxListTile(
+                        title: Text(_todoItemList[index].title),
+                        value: _todoItemList[index].status == IS_DONE,
+                        onChanged: (bool? value) {
+                          var data = _todoItemList[index];
+                          var fido = TodoItemData(
+                              id: data.id,
+                              title: data.title,
+                              status: data.status == IS_DONE ? 0 : IS_DONE);
+                          updateDog(fido);
+                          setState(() {});
+                        },
+                      );
+                    },
+                  ),
+                ),
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: "请输入待办事项",
+                    contentPadding: const EdgeInsets.all(10.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                    ),
+                  ),
+                  controller: _todoController,
+                  onSubmitted: (v) {
+                    _addTodoItem(v);
+                    // 清空text filed
+                    _todoController.clear();
+                    // focus 到 text filed
+                    FocusScope.of(context).requestFocus(FocusNode());
+                  },
+                )
+              ]),
+            );
+          } else {
+            return const Center(child: Text("Error"));
+          }
+        });
   }
 }
