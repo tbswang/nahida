@@ -33,7 +33,6 @@ _reset() async {
   return await db.execute('DROP TABLE todo_item');
 }
 
-// A method that retrieves all the dogs from the dogs table.
 Future<List<TodoItemData>> todoItems({int showStatus = -1}) async {
   // Get a reference to the database.
   final db = await DatabaseHelper.instance.database;

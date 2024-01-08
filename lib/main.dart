@@ -4,6 +4,8 @@ import 'sqlite/todo_provider.dart';
 
 // ignore: constant_identifier_names
 const IS_DONE = 1;
+// ignore: constant_identifier_names
+const IS_NOT_DONE = 0;
 
 void main() async {
   runApp(const MyApp());
@@ -29,13 +31,13 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.teal,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({Key? key}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -46,36 +48,39 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
-  final String title;
+  // final String title;
 
   @override
   // State<MyHomePage> createState() => _MyHomePageState();
-  State<MyHomePage> createState() => _TodoPageState();
+  TodoPageState createState() => TodoPageState();
 }
 
-class _TodoPageState extends State<MyHomePage> {
-  List<TodoItemData> todoItemList = [];
+class TodoPageState extends State<MyHomePage> {
+  List<TodoItemData> _todoItemList = [];
+  int _showStatus = IS_NOT_DONE;
+  final _todoController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _refreshList();
-  }
-
-  _refreshList() async {
-    List<TodoItemData> data = await todoItems();
-    print(data);
     setState(() {
-      todoItemList = data;
+      _showStatus = IS_NOT_DONE;
     });
   }
 
-  final _todoController = TextEditingController();
-  var showStatus = 0;
+  void _refreshList() async {
+    List<TodoItemData> data = await todoItems(showStatus: _showStatus);
+    setState(() {
+      _todoItemList = data;
+    });
+  }
 
-  _showStatus(int status) async {
-    showStatus = status;
-    setState(() {});
+  showStatus(int status) async {
+    setState(() {
+      _showStatus = status;
+    });
+    _refreshList();
   }
 
   void _addTodoItem(String v) async {
@@ -86,132 +91,66 @@ class _TodoPageState extends State<MyHomePage> {
       status: 0,
     );
     insertTodoItem(fido);
-    setState(() {});
+    _refreshList();
+    _todoController.clear();
   }
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return FutureBuilder(
-  //       future: todoItems(showStatus: showStatus),
-  //       builder:
-  //           (BuildContext context, AsyncSnapshot<List<TodoItemData>> snapshot) {
-  //         if (snapshot.connectionState == ConnectionState.waiting) {
-  //           return const Center(child: CircularProgressIndicator());
-  //         } else if (snapshot.hasError) {
-  //           return Text('Error: ${snapshot.error}');
-  //         } else if (!snapshot.hasData) {
-  //           return const TextField(
-  //               decoration: InputDecoration(
-  //             hintText: "请输入待办事项",
-  //             contentPadding: const EdgeInsets.all(10.0),
-  //           ));
-  //         } else if (snapshot.connectionState == ConnectionState.done) {
-  //           final _todoItemList = snapshot.data ?? [];
-  //           return Scaffold(
-  //             body: Column(children: <Widget>[
-  //               ButtonBar(
-  //                 alignment: MainAxisAlignment.center,
-  //                 children: <Widget>[
-  //                   ElevatedButton(
-  //                       // 选中的时候紫色
-  //                       style: showStatus == 0
-  //                           ? ButtonStyle(
-  //                               backgroundColor:
-  //                                   MaterialStateProperty.all<Color>(
-  //                                       Colors.purple.shade200),
-  //                             )
-  //                           : null,
-  //                       onPressed: () {
-  //                         _showStatus(0);
-  //                       },
-  //                       child: const Text("进行中")),
-  //                   ElevatedButton(
-  //                       // 选中的时候紫色
-  //                       style: showStatus == 1
-  //                           ? ButtonStyle(
-  //                               backgroundColor:
-  //                                   MaterialStateProperty.all<Color>(
-  //                                       Colors.purple.shade200),
-  //                             )
-  //                           : null,
-  //                       onPressed: () {
-  //                         _showStatus(IS_DONE);
-  //                       },
-  //                       child: const Text("已完成")),
-  //                   ElevatedButton(
-  //                     onPressed: () {
-  //                       clear();
-  //                       setState(() {});
-  //                     },
-  //                     child: const Text('重置'),
-  //                   ),
-  //                 ],
-  //               ),
-  //               Expanded(
-  //                 child: ListView.builder(
-  //                   itemCount: _todoItemList.length,
-  //                   itemBuilder: (BuildContext context, int index) {
-  //                     return CheckboxListTile(
-  //                       title: Text(_todoItemList[index].title),
-  //                       value: _todoItemList[index].status == IS_DONE,
-  //                       onChanged: (bool? value) {
-  //                         var data = _todoItemList[index];
-  //                         var fido = TodoItemData(
-  //                             id: data.id,
-  //                             title: data.title,
-  //                             status: data.status == IS_DONE ? 0 : IS_DONE);
-  //                         updateTodoItem(fido);
-  //                         setState(() {});
-  //                       },
-  //                     );
-  //                   },
-  //                 ),
-  //               ),
-  //               TextField(
-  //                 decoration: InputDecoration(
-  //                   hintText: "请输入待办事项",
-  //                   contentPadding: const EdgeInsets.all(10.0),
-  //                   border: OutlineInputBorder(
-  //                     borderRadius: BorderRadius.circular(15.0),
-  //                   ),
-  //                 ),
-  //                 controller: _todoController,
-  //                 onSubmitted: (v) {
-  //                   _addTodoItem(v);
-  //                   // 清空text filed
-  //                   _todoController.clear();
-  //                   // focus 到 text filed
-  //                   FocusScope.of(context).requestFocus(FocusNode());
-  //                 },
-  //               )
-  //             ]),
-  //           );
-  //         } else {
-  //           return const Center(child: Text("Error"));
-  //         }
-  //       });
-  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: Column(
       children: [
+        ButtonBar(
+          alignment: MainAxisAlignment.center,
+          children: <Widget>[
+            ElevatedButton(
+                // 选中的时候紫色
+                style: _showStatus == 0
+                    ? ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all<Color>(
+                            Colors.purple.shade200),
+                      )
+                    : null,
+                onPressed: () {
+                  showStatus(0);
+                },
+                child: const Text("进行中")),
+            ElevatedButton(
+                // 选中的时候紫色
+                style: _showStatus == 1
+                    ? ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all<Color>(
+                            Colors.purple.shade200),
+                      )
+                    : null,
+                onPressed: () {
+                  showStatus(IS_DONE);
+                },
+                child: const Text("已完成")),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     // clear();
+            //     // do nothing
+            //   },
+            //   child: const Text('重置'),
+            // ),
+          ],
+        ),
         Expanded(
           child: ListView.builder(
-              itemCount: todoItemList.length,
+              itemCount: _todoItemList.length,
               itemBuilder: (BuildContext context, int index) {
                 return CheckboxListTile(
-                  title: Text(todoItemList[index].title),
-                  value: todoItemList[index].status == IS_DONE,
+                  title: Text(_todoItemList[index].title),
+                  value: _todoItemList[index].status == IS_DONE,
                   onChanged: (bool? value) {
-                    var data = todoItemList[index];
+                    var data = _todoItemList[index];
                     var fido = TodoItemData(
                         id: data.id,
                         title: data.title,
-                        status: data.status == IS_DONE ? 0 : IS_DONE);
+                        status: data.status == IS_DONE ? IS_NOT_DONE : IS_DONE);
                     updateTodoItem(fido);
-                    setState(() {});
+                    _refreshList();
                   },
                 );
               }),
@@ -226,12 +165,7 @@ class _TodoPageState extends State<MyHomePage> {
           ),
           controller: _todoController,
           onSubmitted: (v) {
-            print(v);
             _addTodoItem(v);
-            // 清空text filed
-            // _todoController.clear();
-            // focus 到 text filed
-            // FocusScope.of(context).requestFocus(FocusNode());
           },
         )
       ],
