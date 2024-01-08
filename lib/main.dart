@@ -2,36 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'sqlite/todo_item.dart';
+import 'sqlite/database_helper.dart';
 
 // ignore: constant_identifier_names
 const IS_DONE = 1;
-
-// Enum Task_Status
-
-class TodoItemData {
-  final int id;
-  final String title;
-  final int status;
-  const TodoItemData(
-      {required this.id, required this.title, required this.status});
-
-  // Convert a Dog into a Map. The keys must correspond to the names of the
-  // columns in the database.
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      "title": title,
-      "status": status,
-    };
-  }
-
-  // Implement toString to make it easier to see information about
-  // each dog when using the print statement.
-  @override
-  String toString() {
-    return 'TodoItem{id: $id, title: $title, status: $status}';
-  }
-}
 
 void main() async {
   runApp(const MyApp());
@@ -94,29 +69,7 @@ class _TodoPageState extends State<MyHomePage> {
   var showStatus = 0;
 
   Future<void> _initDatabase() async {
-    // 获取应用文档目录的路径
-    final directory = await getDatabasesPath();
-    final path = join(directory, 'todo_item_database.db');
-
-    // 打开/创建数据库
-    final database = await openDatabase(
-      path,
-      onCreate: (db, version) {
-        // Run the CREATE TABLE statement on the database.
-        return db.execute(
-          'CREATE TABLE todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER)',
-        );
-      },
-      onOpen: (db) async {
-        // 如果不存在，就创建一个
-        return await db.execute(
-          'CREATE TABLE IF NOT EXISTS todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER)',
-        );
-      },
-      // Set the version. This executes the onCreate function and provides a
-      // path to perform database upgrades and downgrades.
-      version: 1,
-    );
+    final database = await DatabaseHelper.instance.database;
     setState(() {
       _database = database;
     });
