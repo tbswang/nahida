@@ -2,6 +2,9 @@ class TodoItemData {
   final int id;
   final String title;
   final int status;
+  final int ctime;
+  finale int utime;
+  
   const TodoItemData(
       {required this.id, required this.title, required this.status});
 
@@ -10,6 +13,7 @@ class TodoItemData {
       'id': id,
       "title": title,
       "status": status,
+      
     };
   }
 

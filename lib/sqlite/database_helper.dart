@@ -24,7 +24,7 @@ class DatabaseHelper {
       onCreate: (db, version) {
         // Run the CREATE TABLE statement on the database.
         return db.execute(
-          'CREATE TABLE todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER)',
+          'CREATE TABLE todo_item(id INTEGER PRIMARY KEY, title TEXT, status INTEGER, utime DATETIME DEFAULT CURRENT_TIMESTAMP , ctime DATETIME)',
         );
       },
       onOpen: (db) async {
